@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; background-color: #f3f4f6; padding: 20px; color: #1f2937; margin:0;}
+    .container { max-width: 1050px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    .tabs { display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; overflow-x: auto; gap: 5px; }
+    .tab-btn { padding: 12px 18px; cursor: pointer; font-weight: bold; border: none; background: none; color: #4b5563; border-radius: 6px 6px 0 0; }
+    .tab-btn.active { color: #2563eb; border-bottom: 3px solid #2563eb; background-color: #eff6ff; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px;}
+    input, select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; }
+    button { background-color: #2563eb; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
+    button:hover { background-color: #1d4ed8; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    
+    .invoice-box { border: 1px solid #d1d5db; padding: 40px; background: #fff; margin-top: 25px; border-radius: 8px; }
+    .inv-header-flex { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #1e40af; padding-bottom: 20px; margin-bottom: 25px; }
+    .inv-school-info h1 { margin: 0; color: #1e40af; font-size: 26px; }
+    .inv-school-info p { margin: 3px 0; color: #4b5563; font-size: 13px; }
+    .inv-title-area { text-align: right; }
+    .inv-title-area h2 { margin: 0; font-size: 28px; color: #111827;}
+    .inv-student-details { display: grid; grid-template-columns: 1fr 1fr; background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e2e8f0; }
+    
+    .inv-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+    .inv-table th { background-color: #1e40af; color: white; padding: 12px; text-align: left; }
+    .inv-table td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+    .inv-total-row { background-color: #f1f5f9; font-weight: bold; font-size: 16px; border-top: 2px solid #cbd5e1; }
+    
+    .status-badge { padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
+    .b-paid { background: #dcfce7; color: #16a34a; }
+    .b-pend { background: #fef3c7; color: #d97706; }
+    .b-unp { background: #fee2e2; color: #dc2626; }
+    
+    .edit-btn { background-color: #f59e0b; padding: 6px 12px; color:white; border:none; border-radius:4px; cursor:pointer;}
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+    .modal-content { background: white; width: 500px; margin: 50px auto; padding: 25px; border-radius: 8px; }
+    .close-btn { float: right; cursor: pointer; color: red; font-weight: bold; }
+
+    .chart-box { background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 30px; }
+    .report-card { padding:20px; border-radius:8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .rc-green { background: #f0fdf4; border-left: 5px solid #16a34a; }
+    .rc-red { background: #fef2f2; border-left: 5px solid #dc2626; }
+    .rc-blue { background: #eff6ff; border-left: 5px solid #2563eb; }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .container, .tabs, button, hr, .form-group, p.hide-print, h3, .chart-box, #repData { display: none !important; }
+      .invoice-box { border: none; padding: 0; display: block !important; margin-top:0;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2 style="text-align:center; color: #1e40af;">🎓 Complete School Management Hub</h2>
+  
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('add-tab')">Add Student</button>
+    <button class="tab-btn" onclick="switchTab('search-tab')">Search Database</button>
+    <button class="tab-btn" onclick="switchTab('fee-tab')">Fee Ledger</button>
+    <button class="tab-btn" onclick="switchTab('invoice-tab')">Issue Invoice</button>
+    <button class="tab-btn" onclick="switchTab('report-tab')">Analytics & Graphs</button>
+  </div>
+
+  <div id="add-tab" class="tab-content">
+    <h3>New Student Registry</h3>
+    <form id="studentForm" onsubmit="event.preventDefault(); submitStudent();">
+      <div class="grid-2">
+        <div class="form-group"><label>Name</label><input type="text" id="name" required></div>
+        <div class="form-group"><label>Father Name</label><input type="text" id="fatherName" required></div>
+        <div class="form-group"><label>Roll No</label><input type="text" id="rollNo" required></div>
+        <div class="form-group"><label>Class</label><input type="text" id="studentClass" required></div>
+        <div class="form-group"><label>Section</label><input type="text" id="section" required></div>
+        <div class="form-group"><label>Monthly Fee</label><input type="number" id="monthlyFee" required></div>
+        <div class="form-group"><label>Admission Date</label><input type="date" id="admissionDate" required></div>
+      </div>
+      <button type="submit">Enroll Now</button>
+    </form>
+    <div id="addStatus" style="margin-top:10px; font-weight:bold; color:green;"></div>
+  </div>
+
+  <div id="search-tab" class="tab-content" style="display:none;">
+    <h3>Fast Global Search</h3>
+    <div class="form-group"><label>Search by Reg No</label><input type="text" id="sReg" placeholder="E.g. 1001"></div>
+    <div class="grid-2">
+      <div class="form-group"><label>Search by Class</label><input type="text" id="sClass" placeholder="E.g. Class 5"></div>
+      <div class="form-group"><label>Search by Name</label><input type="text" id="sName" placeholder="E.g. Ali"></div>
+    </div>
+    <button onclick="executeSearch()">Execute Search</button>
+    <div id="searchResults" style="margin-top:20px;"></div>
+  </div>
+
+  <div id="fee-tab" class="tab-content" style="display:none;">
+    <h3 style="color:#047857;">1. Generate New Month Ledger</h3>
+    <div class="form-group"><label>New Month (e.g. Sep_2026)</label><input type="text" id="genNewMonth"></div>
+    <button style="background:#10b981;" onclick="genMonth()">Initialize Month Sheet</button>
+    <div id="genMsg" style="margin-top:10px; font-weight:bold; color:green;"></div>
+    
+    <hr style="margin:25px 0;">
+    
+    <h3 style="color:#b45309;">2. Ledger View & Payments</h3>
+    <div class="form-group"><label>Enter Reg No</label><input type="text" id="ledgerReg"></div>
+    <button style="background:#f59e0b;" onclick="fetchLedger()">Fetch Student Ledger</button>
+    
+    <div id="ledgerArea" style="display:none; margin-top:20px;">
+      <h4 style="background:#f1f5f9; padding:10px; border-radius:5px;">Student: <span id="lName"></span> (<span id="lClass"></span>)</h4>
+      <div id="ledgerTable" style="overflow-x:auto;"></div>
+      <button style="background:#dc2626; margin-top:15px;" onclick="saveBulkLedger()">Save Payments & Sync Sub-Sheets</button>
+      <div id="ledgerMsg" style="margin-top:10px; font-weight:bold;"></div>
+    </div>
+  </div>
+
+  <div id="invoice-tab" class="tab-content" style="display:none;">
+    <h3>Generate Target Month Invoice</h3>
+    <div class="grid-2">
+      <div class="form-group"><label>Reg No</label><input type="text" id="invRegInput"></div>
+      <div class="form-group"><label>Target Month (Leave blank for latest month)</label><input type="text" id="invMonthInput"></div>
+    </div>
+    <button onclick="generateInvoice()">Generate Official Invoice</button>
+    <div id="invErrMsg" style="color:red; font-weight:bold; margin-top:10px;"></div>
+    
+    <div id="invoicePrintArea" class="invoice-box" style="display:none;">
+      <div class="inv-header-flex">
+        <div class="inv-school-info">
+          <h1>YOUR SCHOOL NAME</h1>
+          <p>123 Education Street, Main City</p>
+          <p>Phone: (123) 456-7890 | Email: admin@school.com</p>
+        </div>
+        <div class="inv-title-area">
+          <h2>FEE INVOICE</h2>
+          <p><b>Date:</b> <span id="invDate"></span></p>
+          <p><b>Billing Month:</b> <span id="invMonthName"></span></p>
+        </div>
+      </div>
+      
+      <div class="inv-student-details">
+        <div>
+          <p><b>Registration No:</b> <span id="invReg"></span></p>
+          <p><b>Student Name:</b> <span id="invName"></span></p>
+        </div>
+        <div style="text-align:right;">
+          <p><b>Class & Section:</b> <span id="invClass"></span></p>
+          <p><b>Roll No:</b> <span id="invRoll"></span></p>
+        </div>
+      </div>
+      
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>Fee Description</th>
+            <th style="text-align:right;">Amount (PKR)</th>
+          </tr>
+        </thead>
+        <tbody id="invoiceTableBody">
+        </tbody>
+      </table>
+      
+      <p style="margin-top:20px; text-align:right;"><b>Payment Status:</b> <span id="invStatus"></span></p>
+      
+      <div style="display: flex; justify-content: space-between; margin-top: 60px; font-weight: bold; color: #4b5563;">
+        <div>______________________<br><br>Accounts Officer</div>
+        <div style="text-align:right;">______________________<br><br>Principal Signature</div>
+      </div>
+      
+      <button style="background:#111827; margin-top:40px; display:block; width:100%;" class="hide-print" onclick="window.print()">🖨️ Print Invoice</button>
+    </div>
+  </div>
+
+  <div id="report-tab" class="tab-content" style="display:none;">
+    <h3>Comprehensive Analytics & Graphs</h3>
+    <div class="form-group"><label>Search Specific Month Data (Optional)</label><input type="text" id="repMonth"></div>
+    <button onclick="fetchReport()" style="margin-bottom:20px;">Get Detailed Insights</button>
+    
+    <div id="repData" style="display:none;">
+      <div id="monthlyStatArea" style="display:none; margin-bottom:30px; background:#f8fafc; padding:25px; border-radius:8px; border:1px solid #cbd5e1;">
+        <h3 style="color:#b45309; margin-top:0;">📅 Detailed Report for: <span id="mTitleName" style="color:#000;"></span></h3>
+        <div class="grid-2">
+          <div class="report-card rc-blue"><b>Expected Monthly Collection:</b><br><h2 style="color:#2563eb; margin:5px 0;">Rs. <span id="mExp"></span></h2></div>
+          <div class="report-card rc-green"><b>Amount successfully Collected:</b><br><h2 style="color:#16a34a; margin:5px 0;">Rs. <span id="mCol"></span></h2></div>
+        </div>
+        <p style="font-size:16px;"><b>Pending Fees to collect this month:</b> <span style="color:#dc2626; font-weight:bold;">Rs. <span id="mRec"></span></span></p>
+        <p><b>Accounts Status:</b> Paid: <b id="mPaid" style="color:green"></b> | Pending: <b id="mPend" style="color:orange"></b> | Unpaid: <b id="mUnp" style="color:red"></b></p>
+      </div>
+
+      <div class="chart-box">
+        <h3 style="color:#1e40af; text-align:center; margin-top:0;">📈 Expected vs Collected Fee Trend (Last 6 Months)</h3>
+        <canvas id="trendChart" height="100"></canvas>
+      </div>
+
+      <h3 style="color:#1e40af; margin-top:30px; border-top:1px solid #e5e7eb; padding-top:20px;">📊 All-Time Database Aggregation</h3>
+      <div class="grid-2">
+        <div class="report-card rc-green"><b>Gross Collected Revenue (History)</b><h2 style="color:#16a34a; margin:5px 0;">Rs. <span id="aCol"></span></h2></div>
+        <div class="report-card rc-red"><b>Current Gross Outstanding Arrears</b><h2 style="color:#dc2626; margin:5px 0;">Rs. <span id="aRec"></span></h2></div>
+      </div>
+      <p style="margin-top:15px; font-weight:bold; color:#4b5563;">Overall System Accounts Tracking: <br> Paid: <span id="aPaid"></span> | Pending: <span id="aPend"></span> | Unpaid: <span id="aUnp"></span></p>
+    </div>
+  </div>
+</div>
+
+<div id="editModal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn" onclick="document.getElementById('editModal').style.display='none'">×</span>
+    <h3>Update Registry Details</h3>
+    <form id="editForm" onsubmit="event.preventDefault(); saveEdit();">
+      <input type="hidden" id="eReg">
+      <div class="form-group"><label>Name</label><input type="text" id="eName"></div>
+      <div class="form-group"><label>Father Name</label><input type="text" id="eFName"></div>
+      <div class="grid-2">
+        <div class="form-group"><label>Roll No</label><input type="text" id="eRoll"></div>
+        <div class="form-group"><label>Fee</label><input type="number" id="eFee"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label>Class</label><input type="text" id="eClass"></div>
+        <div class="form-group"><label>Section</label><input type="text" id="eSec"></div>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="eStatus"><option value="Active">Active</option><option value="Left">Left</option></select>
+      </div>
+      <button type="submit" style="background:#10b981;">Save Changes</button>
+    </form>
+    <div id="editMsg" style="margin-top:10px; font-weight:bold;"></div>
+  </div>
+</div>
+
+<script>
+  function switchTab(id) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(id).style.display = 'block';
+    event.currentTarget.classList.add('active');
+  }
+
+  function submitStudent() {
+    var data = {
+      name: document.getElementById('name').value, fatherName: document.getElementById('fatherName').value,
+      rollNo: document.getElementById('rollNo').value, studentClass: document.getElementById('studentClass').value,
+      section: document.getElementById('section').value, monthlyFee: document.getElementById('monthlyFee').value,
+      admissionDate: document.getElementById('admissionDate').value
+    };
+    document.getElementById('addStatus').innerText = "Processing...";
+    google.script.run.withSuccessHandler(res => {
+      document.getElementById('addStatus').innerText = "Enrolled! ID: " + res.regNo;
+      document.getElementById('studentForm').reset();
+    }).addStudent(data);
+  }
+
+  let searchDataDump = [];
+  function executeSearch() {
+    var r = document.getElementById('sReg').value, c = document.getElementById('sClass').value, n = document.getElementById('sName').value;
+    document.getElementById('searchResults').innerHTML = "Scanning...";
+    google.script.run.withSuccessHandler(res => {
+      searchDataDump = res;
+      var h = '<table style="width:100%; border-collapse:collapse;"><tr><th style="background:#f1f5f9; padding:8px; border:1px solid #ddd;">RegNo</th><th style="background:#f1f5f9; padding:8px; border:1px solid #ddd;">Name</th><th style="background:#f1f5f9; padding:8px; border:1px solid #ddd;">Class</th><th style="background:#f1f5f9; padding:8px; border:1px solid #ddd;">Status</th><th style="background:#f1f5f9; padding:8px; border:1px solid #ddd;">Action</th></tr>';
+      if(res.length===0) h='<p style="color:red; font-weight:bold;">No match found in records.</p>';
+      else res.forEach((row, idx) => {
+        h += '<tr><td style="padding:8px; border:1px solid #ddd;">'+row.regNo+'</td><td style="padding:8px; border:1px solid #ddd;">'+row.name+'</td><td style="padding:8px; border:1px solid #ddd;">'+row.studentClass+'-'+row.section+'</td><td style="padding:8px; border:1px solid #ddd;">'+row.status+'</td>';
+        if(!row.isLeftMode) h += '<td style="padding:8px; border:1px solid #ddd;"><button class="edit-btn" onclick="openEdit('+idx+')">Edit</button></td></tr>';
+        else h += '<td style="padding:8px; border:1px solid #ddd;"><i style="color:#6b7280;">Left Record</i></td></tr>';
+      });
+      document.getElementById('searchResults').innerHTML = h + '</table>';
+    }).searchStudent(r, c, n);
+  }
+
+  function openEdit(idx) {
+    var d = searchDataDump[idx];
+    document.getElementById('eReg').value = d.regNo; document.getElementById('eName').value = d.name;
+    document.getElementById('eFName').value = d.fatherName; document.getElementById('eRoll').value = d.rollNo;
+    document.getElementById('eFee').value = d.monthlyFee; document.getElementById('eClass').value = d.studentClass;
+    document.getElementById('eSec').value = d.section; document.getElementById('eStatus').value = d.status;
+    document.getElementById('editModal').style.display = 'block';
+    document.getElementById('editMsg').innerText = '';
+  }
+
+  function saveEdit() {
+    var data = {
+      regNo: document.getElementById('eReg').value, name: document.getElementById('eName').value,
+      fatherName: document.getElementById('eFName').value, rollNo: document.getElementById('eRoll').value,
+      monthlyFee: document.getElementById('eFee').value, studentClass: document.getElementById('eClass').value,
+      section: document.getElementById('eSec').value, status: document.getElementById('eStatus').value
+    };
+    google.script.run.withSuccessHandler(res => {
+      document.getElementById('editMsg').style.color = res.success ? "green" : "red";
+      document.getElementById('editMsg').innerText = res.success ? "Updated!" : res.message;
+      executeSearch();
+    }).updateStudent(data);
+  }
+
+  function genMonth() {
+    var n = document.getElementById('genNewMonth').value;
+    if(!n) return alert("Enter Month Name");
+    document.getElementById('genMsg').innerText = "Generating sheet & Calculating Arrears...";
+    google.script.run.withSuccessHandler(res => document.getElementById('genMsg').innerText = res.message).generateMonthSheet(n);
+  }
+
+  let currentLedgerData = [];
+  function fetchLedger() {
+    var r = document.getElementById('ledgerReg').value;
+    if(!r) return;
+    document.getElementById('ledgerArea').style.display = 'none';
+    google.script.run.withSuccessHandler(res => {
+      if(!res.ledger || res.ledger.length === 0) return alert("No ledger data found.");
+      document.getElementById('lName').innerText = res.info.name;
+      document.getElementById('lClass').innerText = res.info.cls;
+      currentLedgerData = res.ledger;
+      
+      var h = '<table style="width:100%; border-collapse:collapse; margin-top:10px;"><tr><th style="background:#f1f5f9; padding:8px; border:1px solid #ddd;">Month</th><th style="background:#f1f5f9; padding:8px; border:1px solid #ddd;">Cur. Fee</th><th style="background:#f1f5f9; padding:8px; border:1px solid #ddd;">Prev. Arrears</th><th style="background:#f1f5f9; padding:8px; border:1px solid #ddd;">Total Payable</th><th style="background:#f1f5f9; padding:8px; border:1px solid #ddd;">Amt. Paid</th><th style="background:#f1f5f9; padding:8px; border:1px solid #ddd;">Rem. Balance</th><th style="background:#f1f5f9; padding:8px; border:1px solid #ddd;">Status</th></tr>';
+      res.ledger.forEach((rec, idx) => {
+        h += '<tr><td style="padding:8px; border:1px solid #ddd;"><b>'+rec.month+'</b></td><td style="padding:8px; border:1px solid #ddd;">'+rec.curFee+'</td><td style="padding:8px; border:1px solid #ddd; color:red;">'+rec.prevArr+'</td><td style="padding:8px; border:1px solid #ddd; font-weight:bold;">'+rec.totalPay+'</td>';
+        h += '<td style="padding:8px; border:1px solid #ddd;"><input type="number" id="lPaid_'+idx+'" value="'+rec.paid+'" style="width:80px; padding:5px;"></td>';
+        h += '<td style="padding:8px; border:1px solid #ddd; color:'+(rec.rem>0?'red':'green')+';">'+rec.rem+'</td>';
+        h += '<td style="padding:8px; border:1px solid #ddd;"><select id="lStatus_'+idx+'" style="padding:5px;">';
+        h += '<option value="Paid" '+(rec.status==="Paid"?"selected":"")+'>Paid</option>';
+        h += '<option value="Pending" '+(rec.status==="Pending"?"selected":"")+'>Pending</option>';
+        h += '<option value="Unpaid" '+(rec.status==="Unpaid"?"selected":"")+'>Unpaid</option></select></td></tr>';
+      });
+      document.getElementById('ledgerTable').innerHTML = h + '</table>';
+      document.getElementById('ledgerMsg').innerText = '';
+      document.getElementById('ledgerArea').style.display = 'block';
+    }).getStudentLedger(r);
+  }
+
+  function saveBulkLedger() {
+    var updates = [];
+    var r = document.getElementById('ledgerReg').value;
+    currentLedgerData.forEach((rec, idx) => {
+      updates.push({
+        month: rec.month,
+        rowIdx: rec.rowIdx,
+        paid: document.getElementById('lPaid_'+idx).value,
+        status: document.getElementById('lStatus_'+idx).value
+      });
+    });
+    document.getElementById('ledgerMsg').style.color = "orange";
+    document.getElementById('ledgerMsg').innerText = "Updating Sheets & Synchronizing Arrears...";
+    google.script.run.withSuccessHandler(res => {
+      document.getElementById('ledgerMsg').style.color = "green";
+      document.getElementById('ledgerMsg').innerText = res.message;
+      fetchLedger(); 
+    }).updateBulkFees(r, updates);
+  }
+
+  function generateInvoice() {
+    var r = document.getElementById('invRegInput').value;
+    var m = document.getElementById('invMonthInput').value;
+    if(!r) return;
+    document.getElementById('invErrMsg').innerText = "Fetching Record...";
+    document.getElementById('invoicePrintArea').style.display = 'none';
+
+    google.script.run.withSuccessHandler(res => {
+      if(!res) {
+        document.getElementById('invErrMsg').innerText = "Record not found."; return;
+      }
+      document.getElementById('invErrMsg').innerText = "";
+      document.getElementById('invReg').innerText = res.regNo;
+      document.getElementById('invName').innerText = res.name;
+      document.getElementById('invClass').innerText = res.cls;
+      document.getElementById('invRoll').innerText = res.roll;
+      document.getElementById('invDate').innerText = new Date().toLocaleDateString();
+      document.getElementById('invMonthName').innerText = res.month;
+      
+      // BUILD DYNAMIC ROWS FOR INVOICE
+      var tbodyHTML = "";
+      
+      // 1. ADD PENDING MONTHS AS SEPARATE ROWS!
+      if(res.log && res.log.trim() !== "") {
+         var arrearsArray = res.log.split("|");
+         arrearsArray.forEach(function(item) {
+             if(item.trim() !== "") {
+                 var parts = item.split(":"); // e.g. ["Jan_2026", "Rs.500"]
+                 tbodyHTML += `<tr><td>Remaining Fee - <b>${parts[0]}</b></td><td style="text-align:right; color:#b91c1c;">${parts[1].replace('Rs.', '')}</td></tr>`;
+             }
+         });
+      }
+      
+      // 2. ADD CURRENT MONTH
+      tbodyHTML += `<tr><td>Current Month Fee (${res.month})</td><td style="text-align:right;">${res.curFee}</td></tr>`;
+      
+      // 3. TOTALS
+      tbodyHTML += `<tr class="inv-total-row"><td>Total Payable Amount</td><td style="text-align:right;">${res.totalPay}</td></tr>`;
+      tbodyHTML += `<tr><td>Amount Paid Received</td><td style="text-align:right; color:#16a34a;">${res.paid}</td></tr>`;
+      tbodyHTML += `<tr class="inv-total-row" style="background:#e0f2fe;"><td>Remaining Balance Carried Forward</td><td style="text-align:right; color:#1e40af;">${res.rem}</td></tr>`;
+      
+      document.getElementById('invoiceTableBody').innerHTML = tbodyHTML;
+      
+      var sClass = res.status==="Paid"?"b-paid":res.status==="Pending"?"b-pend":"b-unp";
+      document.getElementById('invStatus').innerHTML = '<span class="status-badge '+sClass+'">'+res.status+'</span>';
+      
+      document.getElementById('invoicePrintArea').style.display = 'block';
+    }).getInvoiceData(r, m);
+  }
+
+  let trendChartInstance = null;
+  function fetchReport() {
+    var m = document.getElementById('repMonth').value;
+    google.script.run.withSuccessHandler(res => {
+      document.getElementById('aCol').innerText = res.a.col; 
+      document.getElementById('aRec').innerText = res.a.rec;
+      document.getElementById('aPaid').innerText = res.a.paid; 
+      document.getElementById('aPend').innerText = res.a.pend;
+      document.getElementById('aUnp').innerText = res.a.unp;
+      
+      if(res.m) {
+        document.getElementById('mTitleName').innerText = res.m.name;
+        document.getElementById('mExp').innerText = res.m.exp; 
+        document.getElementById('mCol').innerText = res.m.col; 
+        document.getElementById('mRec').innerText = res.m.rec;
+        document.getElementById('mPaid').innerText = res.m.paid; 
+        document.getElementById('mPend').innerText = res.m.pend;
+        document.getElementById('mUnp').innerText = res.m.unp;
+        document.getElementById('monthlyStatArea').style.display = 'block';
+      } else {
+        document.getElementById('monthlyStatArea').style.display = 'none';
+      }
+      
+      // LINE GRAPH (Google Search Console Style)
+      var ctx = document.getElementById('trendChart').getContext('2d');
+      if(trendChartInstance) { trendChartInstance.destroy(); }
+      
+      var labels = res.graph.map(g => g.month);
+      var expData = res.graph.map(g => g.expected);
+      var colData = res.graph.map(g => g.collected);
+
+      trendChartInstance = new Chart(ctx, {
+          type: 'line', 
+          data: {
+              labels: labels,
+              datasets: [
+                  {
+                      label: 'Total Expected Fees',
+                      data: expData,
+                      borderColor: '#6366f1', 
+                      backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                      borderWidth: 3,
+                      fill: true,
+                      tension: 0.4, 
+                      pointRadius: 5,
+                      pointBackgroundColor: '#fff'
+                  },
+                  {
+                      label: 'Total Collected Fees',
+                      data: colData,
+                      borderColor: '#10b981', 
+                      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                      borderWidth: 3,
+                      fill: true,
+                      tension: 0.4, 
+                      pointRadius: 5,
+                      pointBackgroundColor: '#fff'
+                  }
+              ]
+          },
+          options: { 
+            responsive: true, 
+            interaction: { mode: 'index', intersect: false }, 
+            scales: { 
+               y: { beginAtZero: true, grid: { borderDash: [5, 5] } },
+               x: { grid: { display: false } }
+            },
+            plugins: { tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)' } }
+          }
+      });
+      
+      document.getElementById('repData').style.display = 'block';
+    }).getReports(m);
+  }
+</script>
+</body>
+</html>
